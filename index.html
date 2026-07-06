@@ -101,17 +101,19 @@
     min-height: 3rem;
   }
 
+  /* The box is exactly as wide as the expected number of digits, so the
+     child can see how many digits belong in it. */
   .blank {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 3rem;
+    width: 3rem;
     height: 3rem;
-    padding: 0 0.4rem;
     border: 3px dashed #bbb;
     border-radius: 12px;
     background: #fafafa;
   }
+  .blank.digits-2 { width: 4.6rem; }
   .blank.active {
     border-style: solid;
     border-color: #1e88e5;
@@ -157,7 +159,6 @@
     border-radius: 14px;
   }
   .numpad .key-back { background: #90a4ae; }
-  .numpad .key-ok   { background: #43a047; }
 
   .big-emoji { font-size: 4rem; margin: 1rem 0; }
 
@@ -318,8 +319,9 @@ function renderTask(task) {
         lineEl.appendChild(span);
       } else {
         const blank = document.createElement('span');
-        blank.className = 'blank';
-        blanks.push({ el: blank, value: token.value });
+        const len = String(token.value).length;
+        blank.className = 'blank digits-' + len;
+        blanks.push({ el: blank, value: token.value, len });
         lineEl.appendChild(blank);
       }
     }
@@ -335,9 +337,12 @@ function activeBlank() {
 }
 
 function onDigit(digit) {
-  if (locked || entry.length >= 2) return;
+  if (locked) return;
+  const blank = activeBlank();
   entry += digit;
-  activeBlank().el.textContent = entry;
+  blank.el.textContent = entry;
+  // Check automatically once the box is full.
+  if (entry.length >= blank.len) checkEntry();
 }
 
 function onBackspace() {
@@ -346,8 +351,7 @@ function onBackspace() {
   activeBlank().el.textContent = entry;
 }
 
-function onConfirm() {
-  if (locked || entry === '') return;
+function checkEntry() {
   const blank = activeBlank();
   if (parseInt(entry, 10) === blank.value) {
     blank.el.classList.remove('active');
@@ -366,12 +370,14 @@ function onConfirm() {
     renderProgress();
     $('feedback').textContent = '🤔 Versuch es nochmal!';
     entry = '';
-    blank.el.textContent = '';
     blank.el.classList.remove('active');
     blank.el.classList.add('error');
+    locked = true;
     setTimeout(() => {
+      blank.el.textContent = '';
       blank.el.classList.remove('error');
       blank.el.classList.add('active');
+      locked = false;
     }, 400);
   }
 }
@@ -409,15 +415,14 @@ function finishRound() {
 
 function buildNumpad() {
   const el = $('numpad');
-  for (const key of ['1','2','3','4','5','6','7','8','9','⌫','0','✓']) {
+  for (const key of ['1','2','3','4','5','6','7','8','9','','0','⌫']) {
     const btn = document.createElement('button');
     btn.textContent = key;
-    if (key === '⌫') {
+    if (key === '') {
+      btn.style.visibility = 'hidden'; // spacer to keep the grid aligned
+    } else if (key === '⌫') {
       btn.className = 'key-back';
       btn.onclick = onBackspace;
-    } else if (key === '✓') {
-      btn.className = 'key-ok';
-      btn.onclick = onConfirm;
     } else {
       btn.onclick = () => onDigit(key);
     }
