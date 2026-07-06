@@ -278,7 +278,6 @@ function makePlusSplitTask() {
   return { lines: [
     [`${a} + ${b} = ?`],
     [`${a} +`, { value: c1 }, '+', { value: c2 }],
-    ['= 10 +', { value: c2 }],
     ['=', { value: a + b }],
   ] };
 }
@@ -291,7 +290,6 @@ function makeMinusSplitTask() {
   return { lines: [
     [`${a} − ${b} = ?`],
     [`${a} −`, { value: c1 }, '−', { value: c2 }],
-    ['= 10 −', { value: c2 }],
     ['=', { value: a - b }],
   ] };
 }
