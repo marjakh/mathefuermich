@@ -62,11 +62,25 @@
   .progress {
     display: flex;
     justify-content: center;
-    gap: 0.3rem;
-    margin-bottom: 1rem;
-    font-size: 1.2rem;
-    min-height: 1.5rem;
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
   }
+
+  .dot {
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #fff;
+  }
+  .dot.current { background: #bbdefb; box-shadow: 0 0 0 3px #1e88e5; }
+  .dot.correct { background: #43a047; }
+  .dot.wrong   { background: #ef6c00; }
 
   .task {
     font-size: 3rem;
@@ -107,7 +121,7 @@
 <div class="card">
   <!-- Startmenü -->
   <div id="screen-menu">
-    <h1>🦊 Mathe für mich</h1>
+    <h1>Mathe für mich</h1>
     <p class="subtitle">Was möchtest du üben?</p>
     <button class="menu-btn plus"  onclick="startRound('plus')">➕ Plusaufgaben</button>
     <button class="menu-btn minus" onclick="startRound('minus')">➖ Minusaufgaben</button>
@@ -139,6 +153,7 @@ let questionIndex = 0;
 let stars = 0;
 let firstTry = true;
 let current = null;
+let results = []; // pro Aufgabe: 'correct' | 'wrong' | null
 
 const $ = id => document.getElementById(id);
 
@@ -156,8 +171,28 @@ function startRound(m) {
   mode = m;
   questionIndex = 0;
   stars = 0;
+  results = new Array(ROUND_LENGTH).fill(null);
   showScreen('quiz');
   nextQuestion();
+}
+
+function renderProgress() {
+  const el = $('progress');
+  el.innerHTML = '';
+  for (let i = 0; i < ROUND_LENGTH; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    if (results[i] === 'correct') {
+      dot.classList.add('correct');
+      dot.textContent = '✓';
+    } else if (results[i] === 'wrong') {
+      dot.classList.add('wrong');
+      dot.textContent = '✗';
+    } else if (i === questionIndex - 1) {
+      dot.classList.add('current');
+    }
+    el.appendChild(dot);
+  }
 }
 
 function randInt(max) {
@@ -199,8 +234,7 @@ function nextQuestion() {
   firstTry = true;
   current = makeQuestion();
 
-  $('progress').textContent =
-    '⭐'.repeat(stars) + '▫️'.repeat(questionIndex - 1 - stars);
+  renderProgress();
   $('task').textContent = current.text;
   $('feedback').textContent = '';
 
@@ -218,12 +252,18 @@ function nextQuestion() {
 function checkAnswer(btn, value) {
   if (value === current.result) {
     btn.classList.add('correct');
-    if (firstTry) stars++;
+    if (firstTry) {
+      stars++;
+      results[questionIndex - 1] = 'correct';
+    }
+    renderProgress();
     $('feedback').textContent = '🎉 Richtig!';
     for (const b of document.querySelectorAll('.answer-btn')) b.onclick = null;
     setTimeout(nextQuestion, 900);
   } else {
     firstTry = false;
+    results[questionIndex - 1] = 'wrong';
+    renderProgress();
     btn.classList.add('wrong');
     btn.onclick = null;
     $('feedback').textContent = '🤔 Versuch es nochmal!';
