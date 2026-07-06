@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mathe für mich</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "Comic Sans MS", "Segoe UI", system-ui, sans-serif;
+    background: linear-gradient(160deg, #fdf6e3 0%, #e3f2fd 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .card {
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 2rem;
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 2rem;
+    color: #ef6c00;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    color: #666;
+    margin-bottom: 1.5rem;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 1.4rem;
+    border: none;
+    border-radius: 16px;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  button:active { transform: scale(0.95); }
+
+  .menu-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 1rem;
+    color: #fff;
+  }
+  .menu-btn.plus  { background: #43a047; }
+  .menu-btn.minus { background: #e53935; }
+  .menu-btn.mixed { background: #7b1fa2; }
+
+  .progress {
+    display: flex;
+    justify-content: center;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    min-height: 1.5rem;
+  }
+
+  .task {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #333;
+    margin: 1rem 0 1.5rem;
+  }
+
+  .answers {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+  }
+
+  .answer-btn {
+    flex: 1;
+    background: #1e88e5;
+    color: #fff;
+    font-size: 1.8rem;
+    font-weight: bold;
+  }
+  .answer-btn.correct { background: #43a047; }
+  .answer-btn.wrong   { background: #e53935; }
+
+  .feedback {
+    font-size: 1.5rem;
+    min-height: 2.2rem;
+    margin-top: 1.25rem;
+  }
+
+  .big-emoji { font-size: 4rem; margin: 1rem 0; }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Startmenü -->
+  <div id="screen-menu">
+    <h1>🦊 Mathe für mich</h1>
+    <p class="subtitle">Was möchtest du üben?</p>
+    <button class="menu-btn plus"  onclick="startRound('plus')">➕ Plusaufgaben</button>
+    <button class="menu-btn minus" onclick="startRound('minus')">➖ Minusaufgaben</button>
+    <button class="menu-btn mixed" onclick="startRound('mixed')">🎲 Gemischt</button>
+  </div>
+
+  <!-- Aufgaben -->
+  <div id="screen-quiz" class="hidden">
+    <div class="progress" id="progress"></div>
+    <div class="task" id="task"></div>
+    <div class="answers" id="answers"></div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <!-- Ergebnis -->
+  <div id="screen-done" class="hidden">
+    <h1>Super gemacht!</h1>
+    <div class="big-emoji" id="done-emoji"></div>
+    <p class="subtitle" id="done-text"></p>
+    <button class="menu-btn mixed" onclick="showMenu()">🔁 Nochmal spielen</button>
+  </div>
+</div>
+
+<script>
+const ROUND_LENGTH = 10;
+
+let mode = 'mixed';
+let questionIndex = 0;
+let stars = 0;
+let firstTry = true;
+let current = null;
+
+const $ = id => document.getElementById(id);
+
+function showScreen(name) {
+  for (const s of ['menu', 'quiz', 'done']) {
+    $('screen-' + s).classList.toggle('hidden', s !== name);
+  }
+}
+
+function showMenu() {
+  showScreen('menu');
+}
+
+function startRound(m) {
+  mode = m;
+  questionIndex = 0;
+  stars = 0;
+  showScreen('quiz');
+  nextQuestion();
+}
+
+function randInt(max) {
+  return Math.floor(Math.random() * (max + 1));
+}
+
+// Aufgaben im Zahlenraum bis 20, keine negativen Ergebnisse
+function makeQuestion() {
+  const op = mode === 'mixed' ? (Math.random() < 0.5 ? 'plus' : 'minus') : mode;
+  let a, b, result;
+  if (op === 'plus') {
+    a = randInt(20);
+    b = randInt(20 - a);
+    result = a + b;
+  } else {
+    a = randInt(20);
+    b = randInt(a);
+    result = a - b;
+  }
+  return { text: `${a} ${op === 'plus' ? '+' : '−'} ${b} = ?`, result };
+}
+
+function makeChoices(result) {
+  const choices = new Set([result]);
+  while (choices.size < 3) {
+    const offset = randInt(4) + 1;
+    const wrong = Math.random() < 0.5 ? result + offset : result - offset;
+    if (wrong >= 0 && wrong <= 20) choices.add(wrong);
+  }
+  return [...choices].sort(() => Math.random() - 0.5);
+}
+
+function nextQuestion() {
+  if (questionIndex >= ROUND_LENGTH) {
+    finishRound();
+    return;
+  }
+  questionIndex++;
+  firstTry = true;
+  current = makeQuestion();
+
+  $('progress').textContent =
+    '⭐'.repeat(stars) + '▫️'.repeat(questionIndex - 1 - stars);
+  $('task').textContent = current.text;
+  $('feedback').textContent = '';
+
+  const answersEl = $('answers');
+  answersEl.innerHTML = '';
+  for (const value of makeChoices(current.result)) {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.textContent = value;
+    btn.onclick = () => checkAnswer(btn, value);
+    answersEl.appendChild(btn);
+  }
+}
+
+function checkAnswer(btn, value) {
+  if (value === current.result) {
+    btn.classList.add('correct');
+    if (firstTry) stars++;
+    $('feedback').textContent = '🎉 Richtig!';
+    for (const b of document.querySelectorAll('.answer-btn')) b.onclick = null;
+    setTimeout(nextQuestion, 900);
+  } else {
+    firstTry = false;
+    btn.classList.add('wrong');
+    btn.onclick = null;
+    $('feedback').textContent = '🤔 Versuch es nochmal!';
+  }
+}
+
+function finishRound() {
+  showScreen('done');
+  $('done-emoji').textContent = stars >= 9 ? '🏆' : stars >= 6 ? '🌟' : '💪';
+  $('done-text').textContent =
+    `Du hast ${stars} von ${ROUND_LENGTH} Sternen gesammelt!`;
+}
+</script>
+
+</body>
+</html>
