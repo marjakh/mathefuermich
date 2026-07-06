@@ -55,9 +55,11 @@
     margin-bottom: 1rem;
     color: #fff;
   }
-  .menu-btn.plus  { background: #43a047; }
-  .menu-btn.minus { background: #e53935; }
-  .menu-btn.mixed { background: #7b1fa2; }
+  .menu-btn.plus        { background: #43a047; }
+  .menu-btn.minus       { background: #e53935; }
+  .menu-btn.plus-split  { background: #00897b; }
+  .menu-btn.minus-split { background: #ef6c00; }
+  .menu-btn.mixed       { background: #7b1fa2; }
 
   .progress {
     display: flex;
@@ -83,33 +85,79 @@
   .dot.wrong   { background: #ef6c00; }
 
   .task {
-    font-size: 3rem;
+    font-size: 2rem;
     font-weight: bold;
     color: #333;
-    margin: 1rem 0 1.5rem;
+    margin: 1rem 0;
   }
 
-  .answers {
+  .task-line {
     display: flex;
-    gap: 0.75rem;
     justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    min-height: 3rem;
   }
 
-  .answer-btn {
-    flex: 1;
-    background: #1e88e5;
-    color: #fff;
-    font-size: 1.8rem;
-    font-weight: bold;
+  .blank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+    height: 3rem;
+    padding: 0 0.4rem;
+    border: 3px dashed #bbb;
+    border-radius: 12px;
+    background: #fafafa;
   }
-  .answer-btn.correct { background: #43a047; }
-  .answer-btn.wrong   { background: #e53935; }
+  .blank.active {
+    border-style: solid;
+    border-color: #1e88e5;
+    background: #e3f2fd;
+  }
+  .blank.done {
+    border-style: solid;
+    border-color: #43a047;
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+  .blank.error {
+    border-style: solid;
+    border-color: #e53935;
+    background: #ffebee;
+    animation: shake 0.3s;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25%      { transform: translateX(-6px); }
+    75%      { transform: translateX(6px); }
+  }
 
   .feedback {
-    font-size: 1.5rem;
-    min-height: 2.2rem;
-    margin-top: 1.25rem;
+    font-size: 1.4rem;
+    min-height: 2rem;
+    margin-bottom: 0.5rem;
   }
+
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+  .numpad button {
+    background: #1e88e5;
+    color: #fff;
+    font-size: 1.6rem;
+    font-weight: bold;
+    padding: 0.8rem;
+    border-radius: 14px;
+  }
+  .numpad .key-back { background: #90a4ae; }
+  .numpad .key-ok   { background: #43a047; }
 
   .big-emoji { font-size: 4rem; margin: 1rem 0; }
 
@@ -119,24 +167,26 @@
 <body>
 
 <div class="card">
-  <!-- Startmenü -->
+  <!-- Start menu -->
   <div id="screen-menu">
     <h1>Mathe für mich</h1>
     <p class="subtitle">Was möchtest du üben?</p>
-    <button class="menu-btn plus"  onclick="startRound('plus')">➕ Plusaufgaben</button>
-    <button class="menu-btn minus" onclick="startRound('minus')">➖ Minusaufgaben</button>
-    <button class="menu-btn mixed" onclick="startRound('mixed')">🎲 Gemischt</button>
+    <button class="menu-btn plus"        onclick="startRound('plus')">➕ Plusaufgaben</button>
+    <button class="menu-btn minus"       onclick="startRound('minus')">➖ Minusaufgaben</button>
+    <button class="menu-btn plus-split"  onclick="startRound('plusSplit')">➕ Plus mit Zerlegen</button>
+    <button class="menu-btn minus-split" onclick="startRound('minusSplit')">➖ Minus mit Zerlegen</button>
+    <button class="menu-btn mixed"       onclick="startRound('mixed')">🎲 Gemischt</button>
   </div>
 
-  <!-- Aufgaben -->
+  <!-- Quiz -->
   <div id="screen-quiz" class="hidden">
     <div class="progress" id="progress"></div>
     <div class="task" id="task"></div>
-    <div class="answers" id="answers"></div>
     <div class="feedback" id="feedback"></div>
+    <div class="numpad" id="numpad"></div>
   </div>
 
-  <!-- Ergebnis -->
+  <!-- Result -->
   <div id="screen-done" class="hidden">
     <h1>Super gemacht!</h1>
     <div class="big-emoji" id="done-emoji"></div>
@@ -150,10 +200,13 @@ const ROUND_LENGTH = 10;
 
 let mode = 'mixed';
 let questionIndex = 0;
-let stars = 0;
-let firstTry = true;
-let current = null;
-let results = []; // pro Aufgabe: 'correct' | 'wrong' | null
+let stars = 0;           // tasks solved correctly on the first try
+let firstTry = true;     // no wrong entry yet in the current task
+let results = [];        // per task: 'correct' | 'wrong' | null
+let blanks = [];         // blanks of the current task, in fill order
+let blankIndex = 0;      // which blank is active
+let entry = '';          // digits typed into the active blank
+let locked = false;      // input ignored while transitioning to the next task
 
 const $ = id => document.getElementById(id);
 
@@ -199,75 +252,154 @@ function randInt(max) {
   return Math.floor(Math.random() * (max + 1));
 }
 
-// Aufgaben im Zahlenraum bis 20, keine negativen Ergebnisse
-function makeQuestion() {
-  const op = mode === 'mixed' ? (Math.random() < 0.5 ? 'plus' : 'minus') : mode;
-  let a, b, result;
+// A task is a list of lines; each line is a list of tokens. A token is
+// either static text or a blank ({ value }) the student must fill in.
+// All numbers stay within 0–20 and results are never negative.
+
+function makePlainTask(op) {
+  let a, b;
   if (op === 'plus') {
     a = randInt(20);
     b = randInt(20 - a);
-    result = a + b;
-  } else {
-    a = randInt(20);
-    b = randInt(a);
-    result = a - b;
+    return { lines: [[`${a} + ${b} =`, { value: a + b }]] };
   }
-  return { text: `${a} ${op === 'plus' ? '+' : '−'} ${b} = ?`, result };
+  a = randInt(20);
+  b = randInt(a);
+  return { lines: [[`${a} − ${b} =`, { value: a - b }]] };
 }
 
-function makeChoices(result) {
-  const choices = new Set([result]);
-  while (choices.size < 3) {
-    const offset = randInt(4) + 1;
-    const wrong = Math.random() < 0.5 ? result + offset : result - offset;
-    if (wrong >= 0 && wrong <= 20) choices.add(wrong);
+// Splitting tasks always cross the ten: the second number is split so
+// that the first step lands exactly on 10.
+function makePlusSplitTask() {
+  const a = 2 + randInt(7);              // 2..9
+  const c1 = 10 - a;                     // fills a up to 10
+  const b = c1 + 1 + randInt(8 - c1);    // c1+1..9, so the rest is >= 1
+  const c2 = b - c1;
+  return { lines: [
+    [`${a} + ${b} = ?`],
+    [`${a} +`, { value: c1 }, '+', { value: c2 }],
+    ['= 10 +', { value: c2 }],
+    ['=', { value: a + b }],
+  ] };
+}
+
+function makeMinusSplitTask() {
+  const a = 11 + randInt(7);             // 11..18
+  const c1 = a - 10;                     // brings a down to 10
+  const b = c1 + 1 + randInt(8 - c1);    // c1+1..9, so the rest is >= 1
+  const c2 = b - c1;
+  return { lines: [
+    [`${a} − ${b} = ?`],
+    [`${a} −`, { value: c1 }, '−', { value: c2 }],
+    ['= 10 −', { value: c2 }],
+    ['=', { value: a - b }],
+  ] };
+}
+
+function makeTask() {
+  switch (mode) {
+    case 'plus':       return makePlainTask('plus');
+    case 'minus':      return makePlainTask('minus');
+    case 'plusSplit':  return makePlusSplitTask();
+    case 'minusSplit': return makeMinusSplitTask();
+    default:           return makePlainTask(Math.random() < 0.5 ? 'plus' : 'minus');
   }
-  return [...choices].sort(() => Math.random() - 0.5);
+}
+
+function renderTask(task) {
+  const el = $('task');
+  el.innerHTML = '';
+  blanks = [];
+  for (const line of task.lines) {
+    const lineEl = document.createElement('div');
+    lineEl.className = 'task-line';
+    for (const token of line) {
+      if (typeof token === 'string') {
+        const span = document.createElement('span');
+        span.textContent = token;
+        lineEl.appendChild(span);
+      } else {
+        const blank = document.createElement('span');
+        blank.className = 'blank';
+        blanks.push({ el: blank, value: token.value });
+        lineEl.appendChild(blank);
+      }
+    }
+    el.appendChild(lineEl);
+  }
+  blankIndex = 0;
+  entry = '';
+  blanks[0].el.classList.add('active');
+}
+
+function activeBlank() {
+  return blanks[blankIndex];
+}
+
+function onDigit(digit) {
+  if (locked || entry.length >= 2) return;
+  entry += digit;
+  activeBlank().el.textContent = entry;
+}
+
+function onBackspace() {
+  if (locked) return;
+  entry = entry.slice(0, -1);
+  activeBlank().el.textContent = entry;
+}
+
+function onConfirm() {
+  if (locked || entry === '') return;
+  const blank = activeBlank();
+  if (parseInt(entry, 10) === blank.value) {
+    blank.el.classList.remove('active');
+    blank.el.classList.add('done');
+    entry = '';
+    blankIndex++;
+    if (blankIndex >= blanks.length) {
+      finishTask();
+    } else {
+      blanks[blankIndex].el.classList.add('active');
+      $('feedback').textContent = '';
+    }
+  } else {
+    firstTry = false;
+    results[questionIndex - 1] = 'wrong';
+    renderProgress();
+    $('feedback').textContent = '🤔 Versuch es nochmal!';
+    entry = '';
+    blank.el.textContent = '';
+    blank.el.classList.remove('active');
+    blank.el.classList.add('error');
+    setTimeout(() => {
+      blank.el.classList.remove('error');
+      blank.el.classList.add('active');
+    }, 400);
+  }
+}
+
+function finishTask() {
+  if (firstTry) {
+    stars++;
+    results[questionIndex - 1] = 'correct';
+  }
+  renderProgress();
+  $('feedback').textContent = '🎉 Richtig!';
+  locked = true;
+  setTimeout(nextQuestion, 900);
 }
 
 function nextQuestion() {
+  locked = false;
   if (questionIndex >= ROUND_LENGTH) {
     finishRound();
     return;
   }
   questionIndex++;
   firstTry = true;
-  current = makeQuestion();
-
   renderProgress();
-  $('task').textContent = current.text;
+  renderTask(makeTask());
   $('feedback').textContent = '';
-
-  const answersEl = $('answers');
-  answersEl.innerHTML = '';
-  for (const value of makeChoices(current.result)) {
-    const btn = document.createElement('button');
-    btn.className = 'answer-btn';
-    btn.textContent = value;
-    btn.onclick = () => checkAnswer(btn, value);
-    answersEl.appendChild(btn);
-  }
-}
-
-function checkAnswer(btn, value) {
-  if (value === current.result) {
-    btn.classList.add('correct');
-    if (firstTry) {
-      stars++;
-      results[questionIndex - 1] = 'correct';
-    }
-    renderProgress();
-    $('feedback').textContent = '🎉 Richtig!';
-    for (const b of document.querySelectorAll('.answer-btn')) b.onclick = null;
-    setTimeout(nextQuestion, 900);
-  } else {
-    firstTry = false;
-    results[questionIndex - 1] = 'wrong';
-    renderProgress();
-    btn.classList.add('wrong');
-    btn.onclick = null;
-    $('feedback').textContent = '🤔 Versuch es nochmal!';
-  }
 }
 
 function finishRound() {
@@ -276,6 +408,26 @@ function finishRound() {
   $('done-text').textContent =
     `Du hast ${stars} von ${ROUND_LENGTH} Sternen gesammelt!`;
 }
+
+function buildNumpad() {
+  const el = $('numpad');
+  for (const key of ['1','2','3','4','5','6','7','8','9','⌫','0','✓']) {
+    const btn = document.createElement('button');
+    btn.textContent = key;
+    if (key === '⌫') {
+      btn.className = 'key-back';
+      btn.onclick = onBackspace;
+    } else if (key === '✓') {
+      btn.className = 'key-ok';
+      btn.onclick = onConfirm;
+    } else {
+      btn.onclick = () => onDigit(key);
+    }
+    el.appendChild(btn);
+  }
+}
+
+buildNumpad();
 </script>
 
 </body>
