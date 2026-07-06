@@ -1,0 +1,158 @@
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "Comic Sans MS", "Segoe UI", system-ui, sans-serif;
+    background: linear-gradient(160deg, #fdf6e3 0%, #e3f2fd 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .card {
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 2rem;
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 2rem;
+    color: #ef6c00;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    color: #666;
+    margin-bottom: 1.5rem;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 1.4rem;
+    border: none;
+    border-radius: 16px;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  button:active { transform: scale(0.95); }
+
+  .menu-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 1rem;
+    color: #fff;
+  }
+  .menu-btn.plus        { background: #43a047; }
+  .menu-btn.minus       { background: #e53935; }
+  .menu-btn.plus-split  { background: #00897b; }
+  .menu-btn.minus-split { background: #ef6c00; }
+  .menu-btn.mixed       { background: #7b1fa2; }
+
+  .progress {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .dot {
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    background: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #fff;
+  }
+  .dot.current { background: #bbdefb; box-shadow: 0 0 0 3px #1e88e5; }
+  .dot.correct { background: #43a047; }
+  .dot.wrong   { background: #ef6c00; }
+
+  .task {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    margin: 1rem 0;
+  }
+
+  .task-line {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    min-height: 3rem;
+  }
+
+  /* The box is exactly as wide as the expected number of digits, so the
+     child can see how many digits belong in it. */
+  .blank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border: 3px dashed #bbb;
+    border-radius: 12px;
+    background: #fafafa;
+  }
+  .blank.digits-2 { width: 4.6rem; }
+  .blank.active {
+    border-style: solid;
+    border-color: #1e88e5;
+    background: #e3f2fd;
+  }
+  .blank.done {
+    border-style: solid;
+    border-color: #43a047;
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+  .blank.error {
+    border-style: solid;
+    border-color: #e53935;
+    background: #ffebee;
+    animation: shake 0.3s;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25%      { transform: translateX(-6px); }
+    75%      { transform: translateX(6px); }
+  }
+
+  .feedback {
+    font-size: 1.4rem;
+    min-height: 2rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+  .numpad button {
+    background: #1e88e5;
+    color: #fff;
+    font-size: 1.6rem;
+    font-weight: bold;
+    padding: 0.8rem;
+    border-radius: 14px;
+  }
+  .numpad .key-back { background: #90a4ae; }
+
+  .big-emoji { font-size: 4rem; margin: 1rem 0; }
+
+  .hidden { display: none; }
