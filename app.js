@@ -1,6 +1,6 @@
 const ROUND_LENGTH = 10;
 
-let mode = 'mixed';
+let mode = null;
 let questionIndex = 0;
 let stars = 0;           // tasks solved correctly on the first try
 let firstTry = true;     // no wrong entry yet in the current task
@@ -104,7 +104,6 @@ function makeTask() {
     case 'minus':      return makePlainTask('minus');
     case 'plusSplit':  return makePlusSplitTask();
     case 'minusSplit': return makeMinusSplitTask();
-    default:           return makePlainTask(Math.random() < 0.5 ? 'plus' : 'minus');
   }
 }
 

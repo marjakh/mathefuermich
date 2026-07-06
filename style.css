@@ -52,7 +52,7 @@
   .menu-btn.minus       { background: #e53935; }
   .menu-btn.plus-split  { background: #00897b; }
   .menu-btn.minus-split { background: #ef6c00; }
-  .menu-btn.mixed       { background: #7b1fa2; }
+  .menu-btn.replay      { background: #7b1fa2; }
 
   .progress {
     display: flex;
