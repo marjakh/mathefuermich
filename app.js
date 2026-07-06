@@ -9,6 +9,7 @@ let blanks = [];         // blanks of the current task, in fill order
 let blankIndex = 0;      // which blank is active
 let entry = '';          // digits typed into the active blank
 let locked = false;      // input ignored while transitioning to the next task
+let usedTasks = new Set(); // signatures of tasks already shown this round
 
 const $ = id => document.getElementById(id);
 
@@ -27,6 +28,7 @@ function startRound(m) {
   questionIndex = 0;
   stars = 0;
   results = new Array(ROUND_LENGTH).fill(null);
+  usedTasks = new Set();
   showScreen('quiz');
   nextQuestion();
 }
@@ -104,6 +106,21 @@ function makeTask() {
     case 'minusSplit': return makeMinusSplitTask();
     default:           return makePlainTask(Math.random() < 0.5 ? 'plus' : 'minus');
   }
+}
+
+// Every exercise mode has far more than ROUND_LENGTH possible tasks, so a
+// few retries always find an unseen one; the cap only guards against an
+// endless loop if that ever stops being true.
+function makeUniqueTask() {
+  for (let i = 0; i < 100; i++) {
+    const task = makeTask();
+    const key = JSON.stringify(task.lines);
+    if (!usedTasks.has(key)) {
+      usedTasks.add(key);
+      return task;
+    }
+  }
+  return makeTask();
 }
 
 function renderTask(task) {
@@ -203,7 +220,7 @@ function nextQuestion() {
   questionIndex++;
   firstTry = true;
   renderProgress();
-  renderTask(makeTask());
+  renderTask(makeUniqueTask());
   $('feedback').textContent = '';
 }
 
