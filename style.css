@@ -52,6 +52,8 @@
   .menu-btn.minus       { background: #e53935; }
   .menu-btn.plus-split  { background: #00897b; }
   .menu-btn.minus-split { background: #ef6c00; }
+  .menu-btn.plus-table  { background: #3949ab; }
+  .menu-btn.minus-table { background: #d81b60; }
   .menu-btn.replay      { background: #7b1fa2; }
 
   .progress {
@@ -94,6 +96,26 @@
     min-height: 3rem;
   }
 
+  /* Table tasks: a grid whose first row and column hold the numbers
+     being combined; the top-left corner shows the sign. */
+  .grid {
+    display: inline-grid;
+    gap: 0.4rem;
+  }
+  .grid .cell {
+    height: 3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #eeeeee;
+  }
+  /* All grid cells share one width so the columns stay aligned;
+     overrides the digit-based blank widths below. */
+  .grid .cell, .grid .cell.blank { width: 3.6rem; }
+  .grid .head { background: #ffe0b2; }
+  .grid .sign { background: #ef6c00; color: #fff; }
+
   /* The box is exactly as wide as the expected number of digits, so the
      child can see how many digits belong in it. */
   .blank {
@@ -107,6 +129,7 @@
     background: #fafafa;
   }
   .blank.digits-2 { width: 4.6rem; }
+  .blank.clickable { cursor: pointer; }
   .blank.active {
     border-style: solid;
     border-color: #1e88e5;
