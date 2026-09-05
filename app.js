@@ -1,6 +1,10 @@
-const ROUND_LENGTH = 10;
+const DEFAULT_ROUND_LENGTH = 10;
+// Table tasks have several blanks each and take longer per task, so their
+// rounds have fewer questions than the single/double-blank modes.
+const ROUND_LENGTHS = { plusTable: 5, minusTable: 5 };
 
 let mode = null;
+let roundLength = DEFAULT_ROUND_LENGTH;
 let questionIndex = 0;
 let stars = 0;           // tasks solved correctly on the first try
 let firstTry = true;     // no wrong entry yet in the current task
@@ -10,6 +14,7 @@ let blankIndex = 0;      // which blank is active
 let entry = '';          // digits typed into the active blank
 let locked = false;      // input ignored while transitioning to the next task
 let usedTasks = new Set(); // signatures of tasks already shown this round
+let pendingTimeout = null; // handle of the scheduled auto-advance, if any
 
 const $ = id => document.getElementById(id);
 
@@ -23,11 +28,21 @@ function showMenu() {
   showScreen('menu');
 }
 
+// Bails out of the current round back to the menu. Also cancels any
+// auto-advance scheduled by finishTask/checkEntry, since it captured
+// state (questionIndex, blanks) from the round being abandoned.
+function goHome() {
+  clearTimeout(pendingTimeout);
+  locked = false;
+  showMenu();
+}
+
 function startRound(m) {
   mode = m;
+  roundLength = ROUND_LENGTHS[m] || DEFAULT_ROUND_LENGTH;
   questionIndex = 0;
   stars = 0;
-  results = new Array(ROUND_LENGTH).fill(null);
+  results = new Array(roundLength).fill(null);
   usedTasks = new Set();
   showScreen('quiz');
   nextQuestion();
@@ -36,7 +51,7 @@ function startRound(m) {
 function renderProgress() {
   const el = $('progress');
   el.innerHTML = '';
-  for (let i = 0; i < ROUND_LENGTH; i++) {
+  for (let i = 0; i < roundLength; i++) {
     const dot = document.createElement('div');
     dot.className = 'dot';
     if (results[i] === 'correct') {
@@ -314,7 +329,7 @@ function checkEntry() {
     blank.el.classList.remove('active');
     blank.el.classList.add('error');
     locked = true;
-    setTimeout(() => {
+    pendingTimeout = setTimeout(() => {
       blank.el.textContent = '';
       blank.el.classList.remove('error');
       blank.el.classList.add('active');
@@ -331,12 +346,12 @@ function finishTask() {
   renderProgress();
   $('feedback').textContent = '🎉 Richtig!';
   locked = true;
-  setTimeout(nextQuestion, 900);
+  pendingTimeout = setTimeout(nextQuestion, 900);
 }
 
 function nextQuestion() {
   locked = false;
-  if (questionIndex >= ROUND_LENGTH) {
+  if (questionIndex >= roundLength) {
     finishRound();
     return;
   }
@@ -351,7 +366,7 @@ function finishRound() {
   showScreen('done');
   $('done-emoji').textContent = stars >= 9 ? '🏆' : stars >= 6 ? '🌟' : '💪';
   $('done-text').textContent =
-    `Du hast ${stars} von ${ROUND_LENGTH} Sternen gesammelt!`;
+    `Du hast ${stars} von ${roundLength} Sternen gesammelt!`;
 }
 
 function buildNumpad() {
